@@ -1,13 +1,52 @@
-import { createContext } from 'react'
+import { createContext, useReducer, useEffect } from "react";
+import reducer from "./reducer";
+import axios from "axios";
 
-const Context = createContext()
+let API = "http://hn.algolia.com/api/v1/search?";
 
-const ContextProvider = ({children}) => {
-    return(
-        <Context.Provider>
-            {children}
-        </Context.Provider>
-    )
-}
+const initialState = {
+  hit: [],
+  nbPages: 0,
+  page: 0,
+  query: "html",
+  loading: true,
+};
 
-export { Context, ContextProvider }
+const Context = createContext();
+
+const ContextProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  const fetchNewsData = async (url) => {
+    try {
+      const response = await axios.get(url);
+      const data = response.data;
+      dispatch({
+        type: "GET_NEWS",
+        payload: {
+          hits: data.hits,
+          nbPages: data.nbPages,
+        },
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNewsData(`${API}query=${state.query}&page=${state.page}`);
+  }, []);
+
+  // Search Functionality
+  const searchHandler = (searchParams) => {
+    dispatch({ type: "SEARCH_NEWS", payload: searchParams });
+  };
+
+  return (
+    <Context.Provider value={{ ...state, searchHandler }}>
+      {children}
+    </Context.Provider>
+  );
+};
+
+export { Context, ContextProvider };
